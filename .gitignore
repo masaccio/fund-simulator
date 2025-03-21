@@ -23,4 +23,4 @@ src/*.egg-info
 build
 
 # Local
-*.ignore
+retirement_model.py
