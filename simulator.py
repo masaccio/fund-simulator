@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import truncnorm
 from dataclasses import dataclass
+import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -18,20 +19,21 @@ class FundSimulator:
         return truncnorm.rvs(a, b, loc=mean, scale=std, size=size) / 100
 
     def _apply_crashes_and_recovery(
-        self, growth_rates, simulations, num_crashes, crash_percent
+        self, growth_rates, simulations, num_crashes, crash_percent, enforce_recovery
     ):
-        """Injects crash events and enforces recovery over 3 years."""
+        """Injects crash events and optionally enforces recovery over 3 years."""
         for sim in range(simulations):
             crash_years = np.random.choice(
                 self.years, size=min(num_crashes, self.years), replace=False
             )
             for year in crash_years:
                 growth_rates[sim, year] = crash_percent / 100
-                recovery_years = range(year + 1, min(year + 4, self.years))
-                for ry in recovery_years:
-                    growth_rates[sim, ry] = max(
-                        growth_rates[sim, ry], abs(crash_percent) / 100
-                    )
+                if enforce_recovery:
+                    recovery_years = range(year + 1, min(year + 4, self.years))
+                    for ry in recovery_years:
+                        growth_rates[sim, ry] = max(
+                            growth_rates[sim, ry], abs(crash_percent) / 100
+                        )
 
     def _run_simulation_loop(
         self, growth_rates, inflation_rates, initial_withdrawal, simulations
@@ -57,6 +59,7 @@ class FundSimulator:
         simulations: int = 1000,
         num_crashes: int = 0,
         crash_percent: float = -20.0,
+        enforce_recovery: bool = True,
     ) -> float:
         """
         Runs simulations and returns the proportion of runs where the fund was depleted.
@@ -68,6 +71,7 @@ class FundSimulator:
         - simulations: Number of simulation runs.
         - num_crashes: Number of market crashes per simulation.
         - crash_percent: Crash severity as percentage.
+        - enforce_recovery: Whether to enforce recovery growth after crashes.
 
         Returns:
         - Proportion of simulations where the fund was depleted.
@@ -89,7 +93,7 @@ class FundSimulator:
         )
 
         self._apply_crashes_and_recovery(
-            growth_rates, simulations, num_crashes, crash_percent
+            growth_rates, simulations, num_crashes, crash_percent, enforce_recovery
         )
         depleted = self._run_simulation_loop(
             growth_rates, inflation_rates, initial_withdrawal, simulations
