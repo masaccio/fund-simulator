@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.*.icloud
+
+# vim
+.*.swp
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Compiled python modules.
+*.pyc
+
+# Setuptools
+dist
+
+# Python egg metadata, regenerated from source files by setuptools.
+src/*.egg-info
+
+# Testing
+.tox
+.venv
+build
+
+# Local
+*.ignore
