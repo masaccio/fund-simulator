@@ -4,103 +4,88 @@ import numpy as np
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 
-def run_all_probabilities():
-    years = 30
-    starting_fund = 100_000
-    inflation_mean = 2.5
-    inflation_std = 3.0
-    growth_mean = 7.0
-    growth_std = 10.0
-    growth_range = (-30, 30)
-    inflation_range = (-1.5, 15)
+# The mean of the S&P 500, Dow Jones, NASDAQ and FTSE 100 from 1970-2024
+GROWTH_MEAN = 9.74
 
-    simulator = FundSimulator(
-        years=years,
-        initial_fund=starting_fund,
-        growth_mean=growth_mean,
-        growth_std=growth_std,
-        inflation_mean=inflation_mean,
-        inflation_std=inflation_std,
-    )
+# The standard deviation of the S&P 500, Dow Jones, NASDAQ and FTSE 100 from 1970-2024
+GROWTH_STD_DEV = 21.0
 
-    for withdrawal in range(2000, 5001, 100):
-        for num_crashes in [2, 3, 4]:
-            for crash_percent in [-5, -10, -15]:
-                probability = simulator.simulate(
-                    initial_withdrawal=withdrawal,
-                    growth_rate_range=growth_range,
-                    inflation_rate_range=inflation_range,
-                    simulations=1000,
-                    num_crashes=num_crashes,
-                    crash_percent=crash_percent,
-                )
-                print(
-                    f"Withdrawal: ${withdrawal}, Crashes: {num_crashes}, Crash: {crash_percent}%, "
-                    f"Depletion Probability: {probability:.2%}"
-                )
+# Mean UK inflation from 1980-2024
+INFLATION_MEAN = 3.75
 
+# Standard deviation of UK inflation from 1980-2024
+INFLATION_STD_DEV = 3.25
 
-def plot_depletion_vs_withdrawal():
-    simulator = FundSimulator(
-        years=30,
-        initial_fund=100_000,
-        growth_mean=7.0,
-        growth_std=10.0,
-        inflation_mean=2.5,
-        inflation_std=3.0,
-    )
+# UK Inflation from 1980-2024 10th and 90th percentile
+INFLATION_RANGE = (0, 7.74)
 
-    withdrawals = np.arange(2000, 5001, 100)
-    growth_range = (-20, 20)
-    inflation_range = (0, 10)
+# S&P 500, Dow Jones, NASDAQ and FTSE 100 from 1970-2024 10th and 90th percentile
+GROWTH_RANGE = (-24.4, 35.0)
 
-    probabilities_with_recovery = []
-    probabilities_without_recovery = []
+# Other parameters
+NUM_SIMULATIONS = 1000
 
-    for withdrawal in withdrawals:
-        prob_with = simulator.simulate(
-            initial_withdrawal=withdrawal,
-            growth_rate_range=growth_range,
-            inflation_rate_range=inflation_range,
-            simulations=1000,
-            num_crashes=3,
-            crash_percent=-15,
-            enforce_recovery=True,
+# Expected duration of returement
+NUM_YEARS = 30
+
+# Initial fund value is arbitrary since we are only interested in the probability of depletion
+INITIAL_FUND_VALUE = 100_000
+
+# Withdrawal range from 2% to 5% of the initial fund value in steps of 100
+WITHDRAWAL_RANGE = (
+    int(INITIAL_FUND_VALUE * 0.02),
+    int(INITIAL_FUND_VALUE * 0.05 + 1),
+    100,
+)
+
+# What crashes to simulate. We chose 2, 3 and 4 crashes at -5%, -10% and -15% respectively
+CRASH_COUNTS = [2, 3, 4]
+CRASH_PERCENTS = [-5, -10, -15]
+
+simulator = FundSimulator(
+    years=NUM_YEARS,
+    initial_fund=INITIAL_FUND_VALUE,
+    growth_mean=GROWTH_MEAN,
+    growth_std=GROWTH_STD_DEV,
+    inflation_mean=INFLATION_MEAN,
+    inflation_std=INFLATION_STD_DEV,
+)
+
+withdrawals = np.arange(*WITHDRAWAL_RANGE)
+
+plt.figure(figsize=(10, 6))
+
+probabilities = {}
+for num_crashes in CRASH_COUNTS:
+    probabilities[num_crashes] = {}
+    for crash_percent in CRASH_PERCENTS:
+        probabilities[num_crashes][crash_percent] = []
+        for withdrawal in withdrawals:
+            probability = simulator.simulate(
+                initial_withdrawal=withdrawal,
+                growth_rate_range=GROWTH_RANGE,
+                inflation_rate_range=INFLATION_RANGE,
+                simulations=NUM_SIMULATIONS,
+                num_crashes=num_crashes,
+                crash_percent=crash_percent,
+                enforce_recovery=True,
+            )
+            probabilities[num_crashes][crash_percent].append(probability * 100)
+
+        plt.plot(
+            withdrawals,
+            probabilities[num_crashes][crash_percent],
+            label=f"{num_crashes} Crashes at {crash_percent}%",
         )
-        prob_without = simulator.simulate(
-            initial_withdrawal=withdrawal,
-            growth_rate_range=growth_range,
-            inflation_rate_range=inflation_range,
-            simulations=1000,
-            num_crashes=3,
-            crash_percent=-15,
-            enforce_recovery=False,
-        )
-        probabilities_with_recovery.append(prob_with * 100)
-        probabilities_without_recovery.append(prob_without * 100)
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        withdrawals, probabilities_with_recovery, marker="o", label="With Recovery"
-    )
-    plt.plot(
-        withdrawals,
-        probabilities_without_recovery,
-        marker="x",
-        label="Without Recovery",
-    )
-    plt.axhline(y=5, color="red", linestyle="--", label="5% Threshold")
-    plt.gca().yaxis.set_major_locator(MultipleLocator(10))
-    plt.gca().yaxis.set_minor_locator(MultipleLocator(5))
-    plt.gca().yaxis.set_major_formatter(FormatStrFormatter("%d%%"))
-    plt.title("Probability of Depletion vs Withdrawal Amount\n(3 Crashes at -15%)")
-    plt.xlabel("Annual Withdrawal ($)")
-    plt.ylabel("Probability of Depletion (%)")
-    plt.legend()
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
-    plt.tight_layout()
-    plt.show()
-
-
-# run_all_probabilities()
-plot_depletion_vs_withdrawal()
+plt.axhline(y=5, color="red", linestyle="--", label="5% Threshold")
+plt.gca().yaxis.set_major_locator(MultipleLocator(10))
+plt.gca().yaxis.set_minor_locator(MultipleLocator(5))
+plt.gca().yaxis.set_major_formatter(FormatStrFormatter("%d%%"))
+plt.title("Probability of Depletion vs Withdrawal Amount")
+plt.xlabel("Annual Withdrawal ($)")
+plt.ylabel("Probability of Depletion (%)")
+plt.legend()
+plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+plt.tight_layout()
+plt.show()
