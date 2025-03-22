@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import truncnorm
 from dataclasses import dataclass
-import matplotlib.pyplot as plt
 
 
 @dataclass
