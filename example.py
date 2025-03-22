@@ -22,7 +22,8 @@ INFLATION_RANGE = (0, 7.74)
 # S&P 500, Dow Jones, NASDAQ and FTSE 100 from 1970-2024 10th and 90th percentile
 GROWTH_RANGE = (-24.4, 35.0)
 
-# Other parameters
+# 100,000 simulations is what Tamimi et al used in their paper and generates a smooth enough
+# probability curve, though 1000 is sufficient for a quick simulation
 NUM_SIMULATIONS = 1000
 
 # Expected duration of returement
